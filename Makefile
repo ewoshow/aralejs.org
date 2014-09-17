@@ -1,35 +1,29 @@
-THEME = $(HOME)/.spm/themes/arale
+THEME = $(HOME)/.spm/themes/cmd
 
 build-doc:
-	@nico build -v -C $(THEME)/nico.js
+	@nico build -C $(THEME)/nico.js
 
 debug:
-	@nico server -v -C $(THEME)/nico.js --watch debug
+	@nico server -C $(THEME)/nico.js --watch debug
 
 server:
-	@nico server -v -C $(THEME)/nico.js
+	@nico server -C $(THEME)/nico.js
 
 watch:
-	@nico server -v -C $(THEME)/nico.js --watch
+	@nico server -C $(THEME)/nico.js --watch
 
-publish: clean build-doc
-	@ghp-import _site
-	@git push origin gh-pages
+status:
+	@spm status seajs -O _site/status-seajs.js
+	@spm status arale -O _site/status-arale.js
+	@spm status gallery -O _site/status-gallery.js
+	@spm status jquery -O _site/status-jquery.js
+
+publish: clean build-doc status
+	@rm -fr _site/sea-modules
+	@spm publish --doc _site -s spmjs
 
 clean:
 	@rm -fr _site
-
-
-reporter = spec
-url = tests/runner.html
-test:
-	@mocha-phantomjs --reporter=${reporter} http://127.0.0.1:8000/$(url)
-
-coverage:
-	@rm -fr _site/src-cov
-	@jscoverage --encoding=utf8 src _site/src-cov
-	@$(MAKE) test reporter=json-cov url=tests/runner.html?coverage=1 | node $(THEME)/html-cov.js > coverage.html
-	@echo "Build coverage to coverage.html"
 
 
 .PHONY: build-doc debug server publish clean test coverage

@@ -1,55 +1,34 @@
-# 开发一个 Arale 模块
+# 开发一个模块
 
 - order: 4
 - category: arale
 
 ---
 
-### 相关文档
+## 相关文档
 
-1. 基于 widget 开发组件 (TODO)
-2. [测试解决方案](https://github.com/alipay/totoro/wiki)
-3. [开发规范](http://aralejs.org/docs/rules.html)
+1. [Base & Widget 入门教程](https://github.com/aralejs/widget/wiki/Base-&-Widget-%E5%85%A5%E9%97%A8%E6%95%99%E7%A8%8B)
+2. [基础设施快速 API 参考](https://github.com/aralejs/aralejs.org/issues/314)
+3. [测试解决方案](https://github.com/totorojs/totoro/wiki)
+4. [开发规范](http://aralejs.org/docs/rules.html)
+5. [alipay 模块维护文档(内)](http://site.alipay.im/questions/spm/alipay-group.html)
 
 ---
 
-这个教程会简单说明一个组件的开发流程，通过[一个示例](http://puzzle.chuo.me/examples/)让你有切身体会，你也可以跟着一起做哦。
+这个教程会简单说明一个模块的开发流程，通过 [一个示例](http://popomore.spmjs.org/puzzle/) 让你有切身体会，你也可以跟着一起做哦。
 
 源码地址为：[https://github.com/popomore/puzzle](https://github.com/popomore/puzzle)
 
 ## 安装
 
-首先需要[安装 spm](https://github.com/spmjs/spm/wiki/%E5%AE%89%E8%A3%85)。
+请仔细参考 [环境与工具配置](/docs/installation.html) 。
 
-```
-npm install spm -g
-```
 
-### git
+## 初始化模块项目
 
-Arale 代码使用 git 做版本控制工具，下载地址如下
+模块和目录的名称要符合 [a-z\d-]，并以英文字母开头，首选合适的英文单词， **禁止使用驼峰** 。
 
- -  [git for mac](http://code.google.com/p/git-osx-installer/)
-
- -  [git for windows ](http://code.google.com/p/msysgit/)
-
-对 git 不熟的可以看下这个[简易指南](http://rogerdudler.github.com/git-guide/index.zh.html)
-
-### nico
-
-安装文档工具，如果是 Window 用户查看[其他安装方法](https://github.com/aralejs/nico-arale#3-%E5%AE%89%E8%A3%85-arale-theme)。
-
-```
-curl https://raw.github.com/aralejs/nico-arale/master/bootstrap.sh | sudo sh
-```
-
-如出现错误可先查看是否配置了 `PATH` 和 `NODE_PATH`，可以用 [nvm](https://github.com/creationix/nvm) 做 node 管理。
-
-## 初始化组件项目
-
-组件和目录的名称要符合 [a-z\d-]，并以英文字母开头，首选合适的英文单词，**禁止使用驼峰**。
-
-先来看看整个组件的结构，这样会有一个直观的感受。
+先来看看整个模块的结构，这样会有一个直观的感受。
 
 ```
 puzzle
@@ -68,10 +47,10 @@ puzzle
   -- tests                  单元测试
        -- overlay-spec.js
        -- dialog-spec.js
-  -- sea-modules            spm install 生成，存放依赖的其他组件
+  -- sea-modules            spm install 生成，存放依赖的其他模块
   -- _site                  nico 生成，存放站点
   -- HISTORY.md             版本更新说明
-  -- README.md              组件总体说明
+  -- README.md              模块总体说明
   -- package.json           版本等元信息
   -- .gitignore             git 忽略某些文件
   -- .travis.yml            travis 持续集成的配置
@@ -83,67 +62,70 @@ puzzle
 $ mkdir puzzle
 $ cd puzzle
 $ spm init
-prompt: Please select module type:
-1: -> arale(arale module template):  1
-prompt: Define value for property 'root': :  arale
-prompt: Define value for property 'name': :  puzzle
->>> GENERATE /Users/popomore/tmp/overlay/examples/index.md
->>> GENERATE /Users/popomore/tmp/overlay/.gitignore
->>> GENERATE /Users/popomore/tmp/overlay/Makefile
->>> GENERATE /Users/popomore/tmp/overlay/package.json
->>> GENERATE /Users/popomore/tmp/overlay/README.md
->>> GENERATE /Users/popomore/tmp/overlay/src/puzzle.js
->>> GENERATE /Users/popomore/tmp/overlay/tests/puzzle-spec.js
+Please answer the following:
+[?] Project name (puzzle) 
+[?] your CMD family (arale) 
+[?] Version (1.0.0) 
+[?] Description (The best project ever.) 
+[?] Project git repository (git://github.com/afc163/puzzle.git) 
+[?] Project homepage (https://github.com/afc163/puzzle) 
+[?] Project issues tracker (https://github.com/afc163/puzzle/issues) 
+[?] Licenses (MIT) 
+[?] Do you need to make any changes to the above before continuing? (y/N)
 ```
 
-初始化的时候需要选择模板，root 为 arale，name 为组件名。初始化完成后会生成一个骨架，在这个基础上进行开发更方便，之后可以提交到版本库了，当然你可以在 github 上建一个。
- 
+初始化的时候会自动选择 `~/.spm/init/cmd` 作为模板，family 为 arale，name 为模块名。初始化完成后会生成一个骨架，
+在这个基础上进行开发更方便，之后可以提交到版本库了，当然你可以在 github 上建一个库。
+
 ```
 git init
 git add .
-git commit -m 'init'
+git commit -m 'first commit'
 git remote add origin git@github.com:popomore/puzzle.git
 git push origin master
 ```
 
 ## 进行开发
 
-首先分析组件的依赖，比如 `puzzle` 需要 `popup`。
+首先分析模块的依赖，比如 `puzzle` 需要 `popup`。
 
-根据 ID 规则要查看 `widget` 的版本，使用 `spm search` 的时候也要加 root 哦。
+根据 ID 规则要查看 `widget` 的版本，使用 `spm info` 的时候也要加 family 哦。
 
-```
-$ spm search arale.popup
-popup:
-  versions:
-    0.9.9:
-      - popup.js
-    0.9.10:
-      - popup.js
-    0.9.11:
-      - popup.js
+```bash
+$ spm info arale/popup
+
+  arale/popup
+  1.0.2 ~ stable
+  vers: 1.0.2  1.0.1
+  desc: Popup 是可触发的浮层模块。
+  link: http://aralejs.org/popup/
+  repo: https://github.com/aralejs/popup.git
+
 ```
 
 在 `package.json` 中添加依赖
 
-```
-"dependencies": {
-    "$": "$",
-    "popup": "arale/popup/0.9.11/popup"
+```js
+"spm": {
+    "alias": {
+        "$": "$",
+        "popup": "arale/popup/1.0.2/popup"
+    }
 }
 ```
 
-**注意：** `package.json` 为 json 文件，需要用双引号才合法，可以查看[详细配置](https://github.com/spmjs/spm/wiki/package.json)。
+**注意：** `package.json` 为 json 文件，需要用双引号才合法，可以查看[详细配置](http://docs.spmjs.org/en/package)。
 
-使用 `spm install` 下载依赖，会把 dependencies 配置的组件都下载到 sea-modules 下。`jquery` 配置为 $ 是因为使用了别名配置，不需要完整的依赖路径。
+使用 `spm install` 下载依赖，会把 alias 配置的模块都下载到 sea-modules 下。
+`jquery` 配置为 $ 是因为使用了别名配置，不需要完整的依赖路径。
 
-```
+```bash
 $ spm install
 ```
 
 修改 `src/puzzle.js` 进行开发
 
-```
+```js
 define(function(require, exports, module) {
   var popup = require('popup'),
     $ = require('$');
@@ -154,8 +136,8 @@ define(function(require, exports, module) {
 
 启服务进行调试
 
-```
-$ make debug
+```bash
+$ spm doc watch
 ```
 
 通过浏览器访问 [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
@@ -166,106 +148,116 @@ examples 也使用 md 编写，这样写起来非常方便，除了基本的 mar
 
 在 `examples/index.md` 添加实例化代码，puzzle 已添加别名，可以直接 use。
 
-    ````javascript
-    seajs.use('puzzle', function(Puzzle) {
-        
-    });
-    ````
+````javascript
+seajs.use('puzzle', function(Puzzle) {
+  // use Puzzle
+});
+````
 
-nico 支持 livereload，只要通过 `make debug` 或 `make watch` 启动服务，修改文件后都会自动构建和刷新浏览器。
+通过四个 ```` 所包裹的代码不仅会显示成代码片段，也会插入 HTML 中进行实际运行，这样你调试好代码后，演示页面的文档也同时生成好了。
 
-[查看 Makefile 的配置](https://github.com/aralejs/nico-arale#%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E)
+spm doc 支持 livereload，只要通过 `spm doc watch` 启动服务，修改文件后都会自动构建和刷新浏览器。
+
+> 更多 Markdown 写文档的技巧请参考 https://github.com/spmjs/nico-cmd#%E6%96%87%E6%A1%A3%E7%BC%96%E8%BE%91 。
+
 
 ## 编写测试用例
 
-Arale 提供 [mocha](https://github.com/alipay/totoro/wiki/mocha) 作为测试框架，开发者只要关注如何写好测试用例。
+Arale 提供 [mocha](https://github.com/totorojs/totoro/wiki/mocha) 作为测试框架，开发者只要关注如何写好测试用例。
 
-修改 `package.json` 配置哪些文件需要测试，通过 **命名 + '-spec.js'** 拼装去找文件。
-
-```
-"tests": ["puzzle"]
-```
+工具会到 tests 目录下的通过 **命名 + '-spec.js'** 拼装去找文件。
 
 修改 `tests/puzzle-spec.js` 文件，开始写测试用例，可以直接看[示例](https://github.com/popomore/puzzle/blob/master/tests/puzzle-spec.js)。
 
-[详细文档请看](https://github.com/alipay/totoro/wiki/unit-testing-quick-start)
+[详细文档请看](https://github.com/totorojs/totoro/wiki/unit-testing-quick-start.zh)
 
 访问 [http://127.0.0.1:8000/tests/runner.html](http://127.0.0.1:8000/tests/runner.html) 查看是否正确。
 
-Arale 已经配置 travis，只要开通就可以**持续集成**。[登录 travis](https://travis-ci.org/profile)，开启 travis。
+Arale 已经配置 travis，只要开通就可以 **持续集成** 。[登录 travis](https://travis-ci.org/profile)，开启 travis。
 
 ## 部署文件
 
 修改 `package.json` 配置打包方式
 
-```
-"output": {
-    "puzzle.js": "."
-}
+```js
+"output": ["puzzle.js"]
 ```
 
-`'.'` 意味着只打包组件内部的文件（包括依赖的文件），由于 puzzle.js 没有依赖所以就相当于 `"puzzle.js": ["puzzle.js"]`。
+这样 `spm build` 将打包 src 目录下的 `puzzle.js` 文件，并将这个文件中的本地依赖文件也打包进来。
 
-最常用的为以下三种，具体配置的参数可查看[文档](https://github.com/spmjs/spm/wiki/package.json-:-output)。
+具体配置的参数可查看[output配置文档](http://docs.spmjs.org/en/package#spm-output)。
 
-```
-{
-    "a.js": ".",  // 将依赖组件内部的文件打包成一个文件
-    "b.js": "*",  // 将所有依赖的文件打包成一个文件
-    "c.js": ["c.js", "d.js"]  // 将指定文件打包成一个
-}
-```
+接下来就可以开始打包，build 后会在 dist 目录生成打包的文件和 -debug 文件。
 
-开始打包，build 后会在 dist 目录生成打包的文件和 -debug 文件。
-
-```
+```bash
 $ spm build
 ```
 
-查看 [build 参数](https://github.com/spmjs/spm/wiki/%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%8F%82%E6%95%B0)进行定制
+[spm build](https://github.com/spmjs/spm-build) 使用 gruntjs 进行实现，能够打包压缩符合 cmd 规范的 js 和 css 文件。
 
-上传到源
+标准模块的打包流程可见：https://github.com/spmjs/spm-build/blob/master/index.js#L39
 
+在支付宝，我们还添加了一些自定义的 task：https://github.com/spmjs/spm-alipay-suite/blob/master/Gruntfile.js#L97
+
+### 发布到源中
+
+只有发布到源中，你的模块才能被其他模块调用。通过 `spm publish` 命令将会把你的模块发布到默认的源服务器中。
+（默认为 https://spmjs.org ，这个源服务器需要用户校验以及对应 family 的权限，请自行[注册账号](http://docs.spmjs.org/en/#register-amp-login)进行发布）
+
+```bash
+$ spm publish
 ```
-$ spm upload
-```
 
-部署到服务器，请参见 [spm-deploy](https://github.com/spmjs/spm/wiki/spm-deploy)。
+### 部署到开发服务器
 
-```
+请参见 [spm-deploy](https://github.com/spmjs/spm-deploy)。
+
+```bash
 $ spm deploy
+$ spm deploy --target p123  // 发布到 assets.p123.example.net
 ```
 
-## 部署组件文档
+## 部署模块文档
 
-Arale 组件的文档地址为 aralejs.org/{{模块名}}，
-开发完毕后请 push 到 https://github.com/aralejs 下，并绑定 hook 为
-http://aralejs.org/-update/{{模块名}} 。这样只要 push 后文档会自动更新到位。
+Arale 模块的文档地址为 aralejs.org/{{模块名}}，
+开发完毕后请 push 到 https://github.com/aralejs 下，发布文档请使用 `spm doc publish` 命令。
 
-其他组件的文档地址在内网：arale.alipay.im/{{模块root}}/{{模块名}}，比如
+其他模块的文档地址在内网：arale.alipay.im/{{模块root}}/{{模块名}}，比如
 `alipay.xbox` 的文档地址为 `http://arale.alipay.im/alipay/xbox/` 。
 
-开发完组件后，只需要把目录下的`Makefile`中的`make publish`这段换成如下代码：
+开发完模块后，只需要运行如下代码就可以把文档部署上线。
 
-```
-name = `cat package.json | grep \"name\" | awk -F'"' '{print $$4}'`
-root = `cat package.json | grep \"root\" | awk -F'"' '{print $$4}'`
-html = _site
-tmpfile = tmp.tar.gz
-publish:
-	@git pull origin master
-	@nico build -v -C $(THEME)/nico.js
-	@rm -f ${tmpfile}
-	@tar --exclude='.git/*' -czf ${tmpfile} ${html}
-	@curl -F name=${name} -F file=@${tmpfile} http://arale.alipay.im/repository/upload/${root}
-	@rm -f ${tmpfile}
+```bash
+$ spm doc publish
 ```
 
-然后使用如下命名就可以把文档部署到对应地址了。
+或者
+
+```bash
+$ spm doc publish -s alipay
+```
+
+`-s alipay` 这个参数指定了发布文档到哪台源服务器，如果没有指定，则发布到默认的地址中去，
+你可以在 `~/.spm/spmrc` 文件中查看配置的默认源是什么。
+
+```ini
+[source:default]
+url = http://yuan.alipay.im
+```
+
+一般来说，支付宝内部的源地址是 `http://yuan.alipay.im`，公网的源地址是 `https://spmjs.org`。
+
+发布到源中。publish 命令将会把你的模块发布到默认的源服务器中。（例如 spmjs.org，这个源服务器需要用户校验以及对应 family 的权限，请自行[注册账号](http://docs.spmjs.org/en/#register-amp-login)进行发布）
+
+
+## 使用这个模块
+
+我们现在已经写好了这个模块，那么如何使用呢？首先要把构建后的文件按目录部署到你的 assets 服务器上。
+
+比如 arale 的 position 模块：
 
 ```
-$ make publish
+http://static.alipayobjects.com/arale/position/1.0.1/position.js
 ```
 
-> 注意，Makefile文件 的缩进一律用 Tab，否则会报错。
-
+然后就可以像《5 分钟上手指南》里那样用 seajs.use 来启动模块了。

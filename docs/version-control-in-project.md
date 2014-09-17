@@ -1,4 +1,7 @@
-# SeaJS 代码组织实战
+# 代码组织实践
+
+- order: 5
+- category: arale
 
 ---
 
@@ -10,11 +13,15 @@ SeaJS 体系下衍生出数量巨大的各种 JS 模块，每个模块包括不�
 
 一个具体的使用场景中，假设页面中使用
 
-    seajs.use('arale/xxx/0.9.0/xxx')
-    
+```js
+seajs.use('arale/xxx/0.9.0/xxx')
+```
+
 调用模块，这时我决定使用新开发的 1.0.0 版本。上面的代码一共出现了 3 次，修改的时候只把两个地方修改成了
 
-    seajs.use('arale/xxx/1.0.0/xxx')
+```js
+seajs.use('arale/xxx/1.0.0/xxx')
+```
 
 结果造成同一页面中加载了同一组件的两个版本。这个时候我应该如何解决？
 
@@ -33,7 +40,7 @@ SeaJS 体系下衍生出数量巨大的各种 JS 模块，每个模块包括不�
 * [SeaJS 模块标识](https://github.com/seajs/seajs/issues/258)
 
 
-## 最简单最直接
+## 最简单直接
 
 也许这正是你现在使用的方式：
 
@@ -41,13 +48,15 @@ SeaJS 体系下衍生出数量巨大的各种 JS 模块，每个模块包括不�
 
 ### Example:
 
-    seajs.use(['$', 'alipay/xbox/0.9.8/xbox', 'arale/validator/0.8.9/validator'], function($, Xbox, Validator) {
-        // biz logic
-        $(function() {
-            var x = new Xbox({...});
-            var v = new Validator({...})
-        });
+```js
+seajs.use(['$', 'alipay/xbox/0.9.8/xbox', 'arale/validator/0.8.9/validator'], function($, Xbox, Validator) {
+    // biz logic
+    $(function() {
+        var x = new Xbox({...});
+        var v = new Validator({...})
     });
+});
+```
 
 ### 分析
 
@@ -57,7 +66,7 @@ SeaJS 体系下衍生出数量巨大的各种 JS 模块，每个模块包括不�
 
 对于稍微大型点的网站，一个页面的导航（例如 foot 和 head）通常是单独维护的。而页面的其他部分由另外的人维护，也就是说，同一个页面可能隶属于不同的产品或由不同的人（团队）维护，这时很容易出现本文开始处提到的问题：升级版本号的时候一旦有遗漏会造成同一页面中存在加载同一模块的不同版本，从而带来不必要的页面性能开销。
 
-### 总结
+### 小结
 
 方案
 
@@ -85,22 +94,24 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 
 ### Example
 
-    // 页头配置
-    seajs.config({
-        alias: {
-            '$': 'gallery/jquery/1.8.2/jquery',
-            'xbox': 'alipay/xbox/0.9.8/xbox',
-            'validator': 'arale/validator/0.8.9/validator'
-        }
-    });
+```js
+// 页头配置
+seajs.config({
+    alias: {
+        '$': 'gallery/jquery/1.8.2/jquery',
+        'xbox': 'alipay/xbox/0.9.8/xbox',
+        'validator': 'arale/validator/0.8.9/validator'
+    }
+});
 
-    // 页面中调用
-    seajs.use(['$', 'xbox', 'validator'], function($, Xbox, Validator) {
-        $(function() {
-            var x = new Xbox({...});
-            var v = new Validator({...});
-        });
+// 页面中调用
+seajs.use(['$', 'xbox', 'validator'], function($, Xbox, Validator) {
+    $(function() {
+        var x = new Xbox({...});
+        var v = new Validator({...});
     });
+});
+```
 
 ### 分析
 
@@ -108,7 +119,7 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 
 这里的 `seajs.config` 不仅可以作为页面级别的配置，也可以作为产品级别的配置。一个产品中有多个页面，可以公用这个配置。
 
-### 总结
+### 小结
 
 方案
 
@@ -122,6 +133,7 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 缺点
 
 > 比直接 use 模块 id 稍复杂
+> 所有版本集中控制，需要对整个页面的模块调用都有了解并负责模块版本的变更
 
 适用范围
 
@@ -145,54 +157,62 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 
 1.  record/package.json 中配置所有用到的模块：
 
-        "dependencies": {
-            "$": "$",
-            "xbox": "alipay/xbox/0.9.8/xbox",
-            "validator": "arale/validator/0.8.9/validator"
-        }
+    ```js
+    "dependencies": {
+        "$": "$",
+        "xbox": "alipay/xbox/0.9.8/xbox",
+        "validator": "arale/validator/0.8.9/validator"
+    }
+    ```
 
 2.  创建模块入口文件record/src/main.js：
 
-        define(function(require, exports, module) {
-            module.exports = {
-                $: require('$'),
+    ```js
+    define(function(require, exports, module) {
+        module.exports = {
+            $: require('$'),
 
-                arale: {
-                    validator: require('validator')
-                },
+            arale: {
+                validator: require('validator')
+            },
 
-                alipay: {
-                    xbox: require('xbox')
-                },
+            alipay: {
+                xbox: require('xbox')
+            },
 
-                biz: {
-                	// 这是产品中独立研发的模块，使用相对路径
-                    someOtheAPI: require('./biz/some-other-api.js')
-                }
+            biz: {
+                // 这是产品中独立研发的模块，使用相对路径
+                someOtheAPI: require('./biz/some-other-api.js')
             }
-        });
+        }
+    });
+    ```
 
     这里 API 的命名空间可根据需要进行组织。
 
 3.  record/package.json 中配置 output，打包 main.js 模块：
 
-        "output": {
-            "main": "."
-        }
+    ```js
+    "output": [
+        "main.js"
+    ]
+    ```
 
 4.  spm build 后生成 /personal/record/1.0.0/main.js
 
 5.  页面中调用：
 
-        seajs.use('personal/record/1.0.0/main', function(Record) {
-            var xbox = Record.xbox;
-            var validator = Record.validator;
-            // ...
-        });
+    ```js
+    seajs.use('personal/record/1.0.0/main', function(Record) {
+        var xbox = Record.xbox;
+        var validator = Record.validator;
+        // ...
+    });
+    ```
 
 6.  更进一步，可以通过变量或 alias 维护 SDK 的模块 id。例如
 
-    1. 使用 js 全局变量：
+    1) 使用 js 全局变量：
 
       ```
       // global variable
@@ -202,7 +222,7 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
       seajs.use(SDK, function(Record) {...});
       ```
 
-    2. 使用服务器变量
+    2) 使用服务器变量
 
       ```
       // 以 java velocity 模板引擎为例
@@ -226,7 +246,7 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 
 这种使用方式是一个新思路，尝试后或许会发现很实用。
 
-### 总结
+### 小结
 
 方案
 
@@ -246,7 +266,7 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 
 > 大型项目。
 
-## 总结
+## 方案总结
 
 一共有三种主要的使用方式：
 
@@ -255,5 +275,4 @@ alias，顾名思义，就是别名，可以用来做短命名。这里我们利
 * 封装 SDK
 
 以上方案没有优劣之分，需要开发者根据自己产品的实际情况做具体的决策。适合项目的，才是最好的。
-
 

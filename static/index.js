@@ -1,170 +1,220 @@
-(function() {
-  seajs.config({
-    base: 'http://static.alipayobjects.com/',
-    alias: {
-      'popup': 'arale/popup/0.9.13/popup',
-      'autocomplete': 'arale/autocomplete/1.0.0/autocomplete',
-      'placeholder': 'arale/placeholder/1.0.0/placeholder',
-      'fixed': 'arale/fixed/1.0.0/fixed',
-      'afc163': '/sea-modules/afc163'
-    },
-    preload: ['seajs/plugin-combo'],
-    comboExcludes: /word\-color\.js/
+seajs.use([
+  'jquery',
+  'arale-sticky',
+  'word-color',
+  'arale-autocomplete',
+  'keymaster',
+  'moment',
+  "/package.json"],
+  function($, Sticky, wordColor, Autocomplete, key, moment, package) {
+
+  Sticky.stick('#document-wrapper', 0);
+
+  var modules = [];
+  var deprecatedModules = package['module-tags'].deprecated.join(' ');
+
+  var urls = [
+    'http://spmjs.io/repository/search?q=arale&define'
+  ];
+
+  seajs.use(urls, function(arale) {
+    $('.modules-utility').empty();
+    modules = modules.concat(arale);
+
+    insertModules(arale);
+    color('.module');
   });
 
-  seajs.use(
-    ['$', 'popup', 'autocomplete', 'placeholder', 'fixed', 'afc163/word-color/1.0.0/word-color', 'http://aralejs.org/package.js'],
-    function($, Popup, Autocomplete, Placeholder, Fixed, wordColor, araleModules) {
+  seajs.use('http://spm.alipay-inc.com/repository/search?q=alipay&define', function(alipay) {
+    if (alipay) {
+      $('.side-area li:last-child').show();
+      modules = modules.concat(alipay);
+      insertModules(alipay);
+      color('.module');
+    }
+  });
 
-      var modules;
+  function insertModules(data) {
+    if ($('#module-wrapper').length === 0) {
+      return;
+    }
 
-      insertAraleModules(araleModules);      
+    try {
+      data = data.data.results;
+    } catch(e) {}
 
-      // 搜索组件自动完成
-      var ac = new Autocomplete({
-        trigger: '#search',
-        selectFirst: true,
-        dataSource: function() {
-          if (modules) {
-            this.trigger('data', modules);
-          } else {
-            this.trigger('data', araleModules);
-          }
-        },
-        filter: function(data, query) {
-          var result = [];
-          $.each(data, function(index, value) {
-            var temp = (value.root||value.family) + '.' + value.name;
-            value.description = value.description || '';
-            if (temp.indexOf(query) > -1) {
-              result.unshift({matchKey: temp, url: value.homepage});
-            } else if (value.description.indexOf(query) > -1) {
-              result.push({matchKey: temp, url: value.homepage});
-            }
-          });
-          return result;
-        }
-      }).render();
+    data = data.sort(function(a, b) {
+      return a.name.charCodeAt(0) - b.name.charCodeAt(0);
+    });
 
-      ac.on('itemSelect', function(item) {
-        ac.get('trigger').val('正转到 ' + item.matchKey).attr('disabled', 'disabled');
-        var value = item.matchKey.split('.');
-        if (value[0] === 'arale') {
-          location.href = '/' + value[1];
-        } else if (value[0] === 'alipay') {
-          location.href = 'http://arale.alipay.im/alipay/' + value[1];
+    for (var i = 0; i < data.length; i++) {
+      var item = $('<div class="module">\
+        <a class="module-name" target="_blank" href="#"></a>\
+        <span class="module-version"></span>\
+        <p class="module-description"></p>\
+        </div>');
+
+      var pkg = data[i];
+      var family = pkg.name.split('-')[0];
+
+      // 三十天内更新的标注为新模块
+      if (moment().diff(moment(pkg.created_at), 'days') <= 30) {
+        item.addClass('module-new');
+        item.attr('title', "新模块");
+      }
+
+      // 增加 deprecated 信息
+      if (deprecatedModules.indexOf(pkg.name) >= 0) {
+        item.addClass('module-deprecated');
+        item.attr('title', "即将废弃的模块");
+      }
+
+      item.find(".module-name").html(pkg.name.split('-').slice(1).join('-'))
+                               .attr('href', '/' + pkg.name + '/')
+                               .attr('title', pkg.name);
+      item.find(".module-version").html(pkg.version);
+      item.find(".module-description").html(pkg.description)
+                                      .attr('title', pkg.description);
+
+      if (family === 'gallery' || family === 'jquery') {
+        item.find(".module-name").attr('href', "https://spmjs.org/" + family + '/' + pkg.name);
+        $('.modules-' + family).append(item).prev().show();
+      } else if (family === 'arale') {
+        if (pkg.keywords) {
+          $('.modules-' + pkg.keywords[0]).append(item).prev().show();
         } else {
-          location.href = item.url;
+          $('.modules-widget').append(item).prev().show();
         }
+      } else if (family === 'alipay') {
+        var url = 'http://spm.alipay-inc.com/docs/' + pkg.name + '/latest/';
+        item.find(".module-name").attr('href', url);
+        $('.modules-alipay').append(item).prev().show();
+      }
+    }
+  }
+
+  function color(items) {
+    items = $(items);
+    items.each(function(index, item) {
+      item = $(item);
+      item.css('border-left-color', toRgba(wordColor(item.find('.module-name').html()), 0.65));
+    });
+  }
+
+  function toRgba(rgb, opacity) {
+    if (!$.support.opacity) {
+      return rgb;
+    }
+    return rgb.replace('rgb', 'rgba').replace(')', ',' + opacity + ')');
+  }
+
+  var ac = new Autocomplete({
+    trigger: '#search',
+    selectFirst: true,
+    template:
+        '<div class="{{classPrefix}}">\
+            <ul class="{{classPrefix}}-ctn" data-role="items">\
+                {{#each items}}\
+                    <li data-role="item" class="{{../classPrefix}}-item" data-value="{{matchKey}}">\
+                        <div>{{highlightItem ../classPrefix matchKey}}</div>\
+                        <div class="ui-autocomplete-desc">{{desc}}</div>\
+                    </li>\
+                {{/each}}\
+            </ul>\
+         </div>',
+    dataSource: function() {
+      this.trigger('data', modules);
+    },
+    filter: function(data, query) {
+      var result = [];
+      query = query.toLowerCase().replace(/^\s+|\s+$/g, '');
+
+      $.each(data, function(index, value) {
+        value.description = (value.description || '').toLowerCase();
+        value.family = value.family.toLowerCase();
+        value.name = value.name.toLowerCase();
+        var FamilyAndName = value.family + '/' + value.name;
+        var keywords = value.keywords ? value.keywords.join(' ') : '';
+
+        var item = {
+          matchKey: FamilyAndName,
+          desc: value.description,
+          url: "https://spmjs.org/" + value.family + '/' + value.name,
+          score: 0  //匹配度
+        };
+
+        // make sure that "arale.class" can be matched
+        if (FamilyAndName.indexOf(query) > -1) {
+          item.score += 0.01;
+        }
+
+        if (value.family.indexOf(query) > -1) {
+          item.score += 1;
+        }
+        if (value.family.indexOf(query) === 0) {
+          item.score += 10;
+        }
+
+        if (value.name.indexOf(query) > -1) {
+          item.score += 20;
+          item.score -= value.name.length/0.99; // shorter would be better
+        } else if (value.description.indexOf(query) > -1) {
+          item.score += 0.1;
+        }
+
+        if (keywords.indexOf(query) > -1) {
+          item.score += 1;
+        }
+
+        value.keywords && value.keywords.forEach(function(k) {
+          if (k === query && k !== value.name) {
+            item.score += 5;
+          }
+        });
+
+        if (value.name.indexOf(query) === 0) {
+          item.score += 100;
+        }
+
+        if (item.score > 0) {
+          result.push(item);
+        }
+
       });
 
-      Fixed('#document-wrapper');
+      result = result.sort(function(a, b) {
+        return b.score - a.score;
+      });
 
-      $.get('http://arale.alipay.im/repository/alipay/packages.json?callback=?', function(alipayModules) {
-        if (!alipayModules) {
-          return;
-        }
-        insertAlipayModules(alipayModules);
-        modules = araleModules.concat(alipayModules);
+      return result.slice(0, 12);
 
-        $('#J-alipay').show();
-      }, 'jsonp');
+    }
+  }).render();
 
-      function insertAraleModules(data) {
-        if ($('#module-wrapper').length === 0) {
-          return;
-        }
+  ac.on('itemSelect', function(item) {
+    ac.get('trigger').val('正转到 ' + item.matchKey).attr('disabled', 'disabled');
+    var value = item.matchKey.split('/');
+    if (value[0] === 'arale') {
+      location.href = '/' + value[1];
+    } else if (value[0] === 'alipay') {
+      location.href = 'http://arale.alipay.im/alipay/' + value[1];
+    } else {
+      location.href = item.url;
+    }
+  });
 
-        // 按字母顺序排序
-        data = data.sort(function(a, b) {
-          return a.name[0] > b.name[0];
-        });
-
-        $('.modules').empty();
-        for(var i=0; i<data.length; i++) {
-          var item = $('<a class="module" target="_blank" href="#"></a>');
-          var module = data[i];
-          var root = module.root || module.family;
-          item.html(module.name)
-          .attr('href', '/' + module.name + '/')
-          .data('name', module.name)
-          .data('description', module.description)
-          .data('version', module.version);
-          if (root === 'gallery') {
-            item.attr('href', module.homepage);
-            $('.modules-gallery').append(item).prev().show();
-          } else if (root === 'arale') {
-            item.append('<img alt="Build Status" src="https://secure.travis-ci.org/aralejs/' + item.html() + '.png">');
-            if (module.tag) {
-                $('.modules-' + module.tag).append(item).prev().show();
-            } else if (module.keywords) {
-                $('.modules-' + module.keywords[0]).append(item).prev().show();                
-            }
-          }
-        }
-        cardPopup('.module');
-        color('.module');
-      }
-
-      function insertAlipayModules(data) {
-        if ($('#module-wrapper').length === 0) {
-          return;
-        }
-
-        data = data.sort(function(a, b) {
-          return a.name[0] > b.name[0];
-        });
-
-        for(var i=0; i<data.length; i++) {
-          var item = $('<a class="module" target="_blank" href="#"></a>');
-          item.html(data[i].name)
-          .attr('href', 'http://arale.alipay.im/' + (data[i].root || data[i].family) + '/' + data[i].name + '/')
-          .data('description', data[i].description || '暂无描述')
-          .data('name', data[i].name)
-          .data('version', data[i].version);
-
-          $('.modules-alipay').append(item);
-          $('.modules-alipay').prev().show();
-        }
-        cardPopup('.modules-alipay .module');        
-        color('.modules-alipay .module');        
-      }
-
-      function cardPopup(items) {
-        // 卡片
-        var popup = new Popup({
-          element: '#card',
-          trigger: items,
-          effect: 'fade',
-          duration: 100,
-          delay: -1,
-          align: {
-            baseXY: [0, -5],
-            selfXY: [0, '100%']
-          }
-        });
-        popup.on('before:show', function() {
-          var at = $(this.activeTrigger);
-          $('#card .card-name').html(at.data('name'));
-          $('#card .card-description').html(at.data('description') || '');
-          $('#card .card-version').html(at.data('version') || '');
-        });
-      }
-
-      function color(items) {
-        items = $(items);
-        items.each(function(index, item) {
-            item = $(item);
-            item.css('border-color', toRgba(wordColor(item.html()), 0.65));
-        });
-      }
-
-      function toRgba(rgb, opacity) {
-        if ($.browser.msie && $.browser.version < 9) {
-            return rgb;
-        }
-        return rgb.replace('rgb', 'rgba').replace(')', ',' + opacity + ')');
-      }
-
+  // 首页将搜索功能定位到搜索框中
+  if ($('#module-wrapper').length !== 0) {
+    key.filter = function(event) {
+      return (event.target || event.srcElement).tagName;
+    };
+    key('command+f, ctrl+f', function(e, handler) {
+      $('#search').focus();
+      return false;
     });
-})();
+    key('esc', function(e, handler) {
+      $('#search').blur();
+    });
+  }
+
+});

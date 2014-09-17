@@ -1,7 +1,6 @@
 # Alice 样式解决方案
 
-- order: 7
-- category: arale
+- order: 6
 
 ---
 
